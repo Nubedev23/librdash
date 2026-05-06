@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Library } from './pages/Library';
+import { Stats } from './pages/Stats';
+import { BookDetail } from './pages/BookDetail';
+
 
 function App() {
   return (
@@ -10,7 +13,9 @@ function App() {
         <Route element={<Layout />}>
           <Route path='/' element={<Dashboard />} />
           <Route path='/library' element={<Library />} />
-          {/* Agregar más rutas aquí */}
+          <Route path='/stats' element={<Stats />} />
+          <Route path='/book/:id' element={<BookDetail/>}/>
+         
         </Route>
       </Routes>
     </BrowserRouter>
