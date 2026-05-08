@@ -1,11 +1,11 @@
 import type { GoogleBook } from '../types';
 
 const BASE_URL = 'https://www.googleapis.com/books/v1';
-
+const API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_KEY;
 export async function searchBooks(query: string): Promise<GoogleBook[]> {
   if (!query.trim()) return [];
 
-  const url = `${BASE_URL}/volumes?q=${encodeURIComponent(query)}&maxResults=12`;
+  const url = `${BASE_URL}/volumes?q=${encodeURIComponent(query)}&maxResults=12&key=${API_KEY}`;
   const res = await fetch(url);
 
   if (!res.ok) throw new Error('Error al buscar libros');
