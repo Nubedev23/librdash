@@ -27,13 +27,17 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
   if (!open) return null;
 
-  const handleAdd = (gb: any) => {
-    const already = books.find(b => b.id === gb.id);
-    if (already) return;
-    const book = mapGoogleBook(gb) as Book;
-    addBook(book);
-  };
-
+const handleAdd = async (gb: any) => {
+  const already = books.find(b => b.id === gb.id);
+  if (already) return;
+  try {
+    const mapped = mapGoogleBook(gb);
+    const { id, ...bookWithoutId } = mapped;
+    await addBook(bookWithoutId as Omit<Book, 'id'>);
+  } catch (err) {
+    console.error('Error al agregar libro:', err);
+  }
+};
   return (
     <div className='fixed inset-0 z-50 flex items-start justify-center pt-20'
       onClick={onClose}>

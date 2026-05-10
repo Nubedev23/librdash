@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Book, ReadingSession, ReadingStats } from '../types';
-import { format, getYear } from 'date-fns';
+import { getYear } from 'date-fns';
 
 export function useStats(books: Book[], sessions: ReadingSession[]) {
   return useMemo((): ReadingStats => {
