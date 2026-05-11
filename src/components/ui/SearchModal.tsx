@@ -12,32 +12,52 @@ interface SearchModalProps {
 
 export function SearchModal({ open, onClose }: SearchModalProps) {
   const [query, setQuery] = useState('');
+  // Nuevo estado para saber qué ID de libro se está agregando en este instante
+  const [addingId, setAddingId] = useState<string | null>(null); 
+  
   const { results, loading, error, search } = useSearch();
   const { addBook, books } = useBooks();
 
   useEffect(() => {
-    if (!open) setQuery('');
+    if (!open) {
+      setQuery('');
+      setAddingId(null); // Limpiamos también el estado de carga por si acaso
+    }
   }, [open]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && query.trim().length > 2) {
-            search(query);
-        }
-    };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && query.trim().length > 2) {
+      search(query);
+    }
+  };
+
+  const handleAdd = async (gb: any) => {
+    const already = books.find(b => b.id === gb.id);
+    if (already) return;
+    
+    try {
+      // 1. Iniciamos el estado de carga para este libro específico
+      setAddingId(gb.id); 
+      
+      const mapped = mapGoogleBook(gb);
+      const { id, ...bookWithoutId } = mapped;
+      
+      // Esperamos a que Supabase termine de guardar
+      await addBook(bookWithoutId as Omit<Book, 'id'>);
+      
+      // 2. Cerramos el modal cuando termina con éxito
+      //onClose(); 
+    } catch (err) {
+      console.error('Error al agregar libro:', err);
+      alert('Hubo un problema al agregar el libro. Intenta de nuevo.');
+    } finally {
+      // 3. Limpiamos el estado sin importar si hubo éxito o error
+      setAddingId(null); 
+    }
+  };
 
   if (!open) return null;
 
-const handleAdd = async (gb: any) => {
-  const already = books.find(b => b.id === gb.id);
-  if (already) return;
-  try {
-    const mapped = mapGoogleBook(gb);
-    const { id, ...bookWithoutId } = mapped;
-    await addBook(bookWithoutId as Omit<Book, 'id'>);
-  } catch (err) {
-    console.error('Error al agregar libro:', err);
-  }
-};
   return (
     <div className='fixed inset-0 z-50 flex items-start justify-center pt-20'
       onClick={onClose}>
@@ -91,6 +111,9 @@ const handleAdd = async (gb: any) => {
 
           {results.map(gb => {
             const already = books.find(b => b.id === gb.id);
+            // Verificamos si este libro en particular está cargando
+            const isAddingThisBook = addingId === gb.id; 
+
             return (
               <div key={gb.id}
                 className='flex items-center gap-3 p-3 hover:bg-slate-800
@@ -114,16 +137,34 @@ const handleAdd = async (gb: any) => {
                     {gb.volumeInfo.pageCount ? `${gb.volumeInfo.pageCount} páginas` : ''}
                   </p>
                 </div>
-                {/* Botón */}
+                {/* Botón Mejorado */}
                 <button
                   onClick={() => handleAdd(gb)}
-                  disabled={!!already}
+                  disabled={!!already || isAddingThisBook}
                   className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg
-                             text-xs transition-colors ${already
-                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-                  <Plus size={12} />
-                  {already ? 'Agregado' : 'Agregar'}
+                             text-xs transition-colors ${
+                               already || isAddingThisBook
+                                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                 : 'bg-blue-600 hover:bg-blue-700 text-white'
+                             }`}>
+                  
+                  {/* Renderizado condicional del ícono y texto */}
+                  {isAddingThisBook ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      Agregando...
+                    </>
+                  ) : already ? (
+                    <>
+                      <Plus size={12} />
+                      Agregado
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={12} />
+                      Agregar
+                    </>
+                  )}
                 </button>
               </div>
             );

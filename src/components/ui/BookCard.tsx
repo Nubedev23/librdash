@@ -1,6 +1,7 @@
 import type { Book } from '../../types';
-import { Star } from 'lucide-react';
+import { Star, Trash2 } from 'lucide-react'; // Importamos Trash2
 import { Link } from 'react-router-dom';
+import { useBooks } from '../../hooks/useBooks'; // Importamos el hook
 
 const statusLabels = {
   'completed': 'Leído',
@@ -15,16 +16,42 @@ const statusColors = {
 };
 
 export function BookCard({ book }: { book: Book }) {
+  const { deleteBook } = useBooks();
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Evita que el Link nos lleve a detalles
+    e.stopPropagation(); // Evita que el evento suba al Link
+    
+    if (confirm(`¿Estás seguro de que quieres eliminar "${book.title}"?`)) {
+      try {
+        await deleteBook(book.id);
+      } catch (err) {
+        alert("No se pudo eliminar el libro");
+      }
+    }
+  };
+
   return (
     <Link to={`/book/${book.id}`}
       className='bg-slate-900 border border-slate-800 rounded-xl
-                 overflow-hidden hover:border-slate-600 transition-colors block'>
+                 overflow-hidden hover:border-slate-600 transition-colors block relative group'>
+      
+      {/* Botón de Eliminar (aparece en hover) */}
+      <button 
+        onClick={handleDelete}
+        className='absolute top-2 right-2 z-10 p-2 bg-red-500/20 hover:bg-red-500 
+                   text-red-500 hover:text-white rounded-lg backdrop-blur-md 
+                   transition-all opacity-0 group-hover:opacity-100'
+      >
+        <Trash2 size={14} />
+      </button>
+
       {/* Portada */}
       <div className='aspect-[2/3] bg-slate-800 overflow-hidden'>
         <img
           src={book.coverUrl}
           alt={book.title}
-          className='w-full h-full object-cover'
+          className='w-full h-full object-cover group-hover:scale-105 transition-transform'
           onError={(e) => { e.currentTarget.src = '/placeholder-book.png'; }}
         />
       </div>

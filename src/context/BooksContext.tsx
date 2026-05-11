@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import type { Book, ReadingStatus } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -25,21 +25,22 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
   const [filter, setFilter] = useState<ReadingStatus | 'all'>('all');
   const [search, setSearch] = useState('');
 
- useEffect(() => {
-  if (!user) { setBooks([]); return; }
-
-  const fetchBooks = async () => {
+  const fetchBooks = useCallback(async (userId: string) => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('books')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
+    if (error) console.error('Error fetching books:', error);
     if (data) setBooks(data.map(mapFromDb));
     setLoading(false);
-  };
+  }, []);
 
-  fetchBooks();
-}, [user]);
+  useEffect(() => {
+    if (!user) { setBooks([]); setLoading(false); return; }
+    fetchBooks(user.id);
+  }, [user?.id]);
 
   const filteredBooks = useMemo(() => {
     return books.filter(book => {
@@ -51,19 +52,20 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
   }, [books, filter, search]);
 
   const addBook = async (book: Omit<Book, 'id'>) => {
-    const { data, error } = await supabase
+    if (!user) throw new Error('No hay sesión activa');
+    const { error } = await supabase
       .from('books')
-      .insert([mapToDb(book, user!.id)])
-      .select()
-      .single();
+      .insert([mapToDb(book, user.id)]);
     if (error) throw error;
-    setBooks(prev => [mapFromDb(data), ...prev]);
+    // Re-fetch desde Supabase para evitar duplicados en el estado local
+    await fetchBooks(user.id);
   };
 
   const updateBook = async (id: string, updates: Partial<Book>) => {
+    if (!user) throw new Error('No hay sesión activa');
     const { data, error } = await supabase
       .from('books')
-      .update(mapToDb(updates as Book, user!.id))
+      .update(mapToDb(updates as Book, user.id))
       .eq('id', id)
       .select()
       .single();
@@ -72,7 +74,12 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteBook = async (id: string) => {
-    const { error } = await supabase.from('books').delete().eq('id', id);
+    if (!user) throw new Error('No hay sesión activa');
+    const { error } = await supabase
+      .from('books')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);   // seguridad extra: solo borra tus propios libros
     if (error) throw error;
     setBooks(prev => prev.filter(b => b.id !== id));
   };
@@ -101,6 +108,7 @@ function mapFromDb(row: any): Book {
     author:     row.author,
     coverUrl:   row.cover_url ?? '',
     totalPages: row.total_pages,
+    pagesRead: row.pages_read ?? 0,
     genre:      row.genre ?? '',
     rating:     row.rating ?? 0,
     status:     row.status,
@@ -118,6 +126,7 @@ function mapToDb(book: Partial<Book>, userId: string) {
     author:      book.author,
     cover_url:   book.coverUrl,
     total_pages: book.totalPages,
+    pages_read: book.pagesRead,
     genre:       book.genre,
     rating:      book.rating || null,
     status:      book.status,
@@ -125,4 +134,5 @@ function mapToDb(book: Partial<Book>, userId: string) {
     finish_date: book.finishDate || null,
     notes:       book.notes || null,
   };
+  
 }
