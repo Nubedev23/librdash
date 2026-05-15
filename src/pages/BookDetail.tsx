@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, BookOpen, Calendar, Star, FileText, Trash2, Save } from 'lucide-react';
 import { useBooks } from '../hooks/useBooks';
 import type { ReadingStatus } from '../types';
+import { useSessions } from '../hooks/useSessions';
 
 const statusLabel: Record<ReadingStatus, string> = {
   'reading': 'Leyendo',
@@ -20,7 +21,7 @@ export function BookDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { books, deleteBook, updateBook } = useBooks();
-
+  const { addSession } = useSessions();
   const book = books.find(b => b.id === id);
 
   // Estados locales para la edición
@@ -60,15 +61,31 @@ export function BookDetail() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Calcular páginas nuevas leídas en esta sesión
+      const pagesNewlyRead = pagesRead - (book.pagesRead || 0);
+
       await updateBook(book.id, {
         rating,
-        pagesRead, // Asegúrate de que este campo exista en tu tabla de Supabase
+        pagesRead,
         startDate,
         finishDate,
         notes,
-        // Si el progreso llega al 100%, podríamos marcarlo como completado automáticamente
-        status: pagesRead >= book.totalPages ? 'completed' : book.status 
+        status: pagesRead >= book.totalPages 
+          ? 'completed' 
+          : pagesRead > 0 
+            ? 'reading' 
+            : book.status
       });
+
+      // Solo crear sesión si realmente leyó páginas nuevas hoy
+      if (pagesNewlyRead > 0) {
+        await addSession({
+          bookId: book.id,
+          date: new Date().toISOString().split('T')[0], // 'YYYY-MM-DD'
+          pagesRead: pagesNewlyRead,
+        });
+      }
+
       alert('¡Cambios guardados!');
     } catch (error) {
       console.error(error);
@@ -76,7 +93,7 @@ export function BookDetail() {
     } finally {
       setIsSaving(false);
     }
-  };
+};
 
   const onDelete = async () => {
     if (confirm(`¿Seguro que quieres eliminar "${book.title}"?`)) {

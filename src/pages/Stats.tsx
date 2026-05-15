@@ -1,11 +1,12 @@
 import { YearlyChart } from '../components/charts/YearlyChart';
 import { useBooks } from '../hooks/useBooks';
 import { useStats } from '../hooks/useStats';
-import { mockSessions } from '../data/mockBooks';
+import { useSessions } from '../hooks/useSessions';
 
 export function Stats() {
   const { books } = useBooks();
-  const stats = useStats(books, mockSessions);
+  const { sessions } = useSessions();
+  const stats = useStats(books, sessions);
 
   return (
     <div className='p-8 space-y-8'>
@@ -14,7 +15,7 @@ export function Stats() {
         <p className='text-slate-400 mt-1'>Tu progreso de lectura</p>
       </div>
 
-      <YearlyChart sessions={mockSessions} />
+      <YearlyChart sessions={sessions} />
 
       <div className='grid grid-cols-2 gap-4'>
         <div className='bg-slate-900 border border-slate-800 rounded-xl p-5'>

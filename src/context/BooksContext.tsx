@@ -126,7 +126,7 @@ function mapToDb(book: Partial<Book>, userId: string) {
     author:      book.author,
     cover_url:   book.coverUrl,
     total_pages: book.totalPages,
-    pages_read: book.pagesRead,
+    pages_read: book.pagesRead ?? 0,
     genre:       book.genre,
     rating:      book.rating || null,
     status:      book.status,

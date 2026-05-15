@@ -48,7 +48,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
       // 2. Cerramos el modal cuando termina con éxito
       //onClose(); 
     } catch (err) {
-      console.error('Error al agregar libro:', err);
+      console.error('Error al agregar libro:', JSON.stringify(err));
       alert('Hubo un problema al agregar el libro. Intenta de nuevo.');
     } finally {
       // 3. Limpiamos el estado sin importar si hubo éxito o error
